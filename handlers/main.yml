@@ -1,3 +1,16 @@
 ---
 # handlers for ivansible.wrt_v2ray
+
+- name: remove temporary v2ray client directory
+  file:
+    path: "{{ temp_v2ray_client_dir.path }}"
+    state: absent
+  become: true
+
+- name: restart wrt service v2ray
+  openwrt_init2:
+    name: "{{ wrt_v2ray_initd }}"
+    state: restarted
+  tags: skip_ansible_lint
+  become: true
 ...

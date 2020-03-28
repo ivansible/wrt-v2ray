@@ -1,5 +1,60 @@
 ---
-- name: root task1
-  debug:
-    msg: task1
+- name: install v2ray packages
+  opkg:
+    name: "{{ wrt_v2ray_packages |join(',') }}"
+  tags: wrt_v2ray_packages
+
+- name: detect latest v2ray client release
+  github_release:
+    repository: v2ray/v2ray-core
+    release: latest
+    template: '{download_url}/v2ray-linux-mipsle.zip'
+    creates: "{{ wrt_v2ray_client_binary }}"
+    reinstall: "{{ wrt_v2ray_client_upgrade |bool }}"
+  register: latest_v2ray_client_release
+  notify: restart wrt service v2ray
+  tags: wrt_v2ray_client
+
+- name: install latest v2ray client
+  include_tasks: install.yml
+  args:
+    apply:
+      become: true
+      tags:
+        - wrt_v2ray_client
+        - wrt_v2ray_all
+  when: latest_v2ray_client_release is changed
+  tags: wrt_v2ray_client
+
+- name: update v2ray configuration
+  template:
+    src: config.json
+    dest: /opt/etc/v2ray.json
+    mode: 0644
+    backup: true
+  notify: restart wrt service v2ray
+  tags: wrt_v2ray_config
+
+- name: create directory for v2ray logs
+  file:
+    path: /opt/var/log/v2ray
+    state: directory
+  tags: wrt_v2ray_service
+
+- name: create v2ray init script
+  copy:
+    src: init.sh
+    dest: /opt/etc/init.d/{{ wrt_v2ray_initd }}
+    mode: 0755
+    force: true
+  notify: restart wrt service v2ray
+  tags: wrt_v2ray_service
+
+- name: enable wrt service v2ray
+  openwrt_init2:
+    name: "{{ wrt_v2ray_initd }}"
+    state: started
+  tags:
+    - skip_ansible_lint
+    - wrt_v2ray_service
 ...

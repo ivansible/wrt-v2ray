@@ -1,0 +1,57 @@
+---
+- name: ensure that temporary directory parent exists
+  file:
+    state: directory
+    ## avoid tmpfs in /tmp and /var/tmp as memory is limited
+    path: "{{ ansible_user_dir }}/.ansible/tmp"
+  register: temp_v2ray_parent
+
+- name: create temporary directory for v2ray client archive
+  tempfile:
+    state: directory
+    path: "{{ temp_v2ray_parent.path }}"
+    prefix: v2ray-client-archive.
+  register: temp_v2ray_client_dir
+  notify: remove temporary v2ray client directory
+
+- name: download archived v2ray client
+  get_url:
+    url: "{{ latest_v2ray_client_release.url }}"
+    dest: "{{ temp_v2ray_client_dir.path }}/release.zip"
+    force: true
+
+## Ansible unarchive module fails to invoke busybox unzip
+## As a workaround, download and unpack the archive manually
+- name: unpack downloaded v2ray client archive
+  # noqa 303 301
+  command: unzip release.zip
+  args:
+    chdir: "{{ temp_v2ray_client_dir.path }}"
+
+- name: ensure that v2ray client directory exists
+  file:
+    path: "{{ wrt_v2ray_client_binary |dirname }}"
+    state: directory
+
+- name: copy v2ray client binary in place
+  copy:
+    remote_src: true
+    src: "{{ temp_v2ray_client_dir.path }}/v2ray"
+    dest: "{{ wrt_v2ray_client_binary }}"
+    force: true
+
+- name: copy v2ctl binary in place
+  copy:
+    remote_src: true
+    src: "{{ temp_v2ray_client_dir.path }}/v2ctl"
+    dest: "{{ wrt_v2ray_client_binary |dirname }}"
+    force: true
+
+- name: ensure that v2ray client and v2ctl binary are executable
+  file:
+    path: "{{ item }}"
+    mode: 0755
+  loop:
+    - "{{ wrt_v2ray_client_binary }}"
+    - "{{ wrt_v2ray_client_binary |dirname }}/v2ctl"
+...

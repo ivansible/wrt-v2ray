@@ -1,0 +1,94 @@
+{
+  "log": {
+{% if wrt_v2ray_logging |bool %}
+    "loglevel": "info",
+    "access": "/opt/var/log/v2ray/access.log",
+    "error": "/opt/var/log/v2ray/error.log"
+{% else %}
+    "loglevel": "warning"
+{% endif %}
+  },
+  "inbounds": [
+    {
+      "port": {{ wrt_v2ray_socks_port |int }},
+      "listen": "{{ wrt_v2ray_socks_addr }}",
+      "tag": "socks-inbound",
+      "protocol": "socks",
+      "settings": {
+        "auth": "noauth",
+        "udp": false,
+        "ip": "{{ wrt_v2ray_socks_addr }}"
+      }
+    }
+  ],
+  "outbounds": [
+{% for domain in wrt_v2ray_domains |default([],true) |flatten %}
+    {
+      "tag": "cdn:{{ domain }}",
+      "protocol": "vmess",
+      "settings": {
+        "vnext": [{
+          "address": "{{ domain }}",
+          "port": {{ wrt_v2ray_web_port |int }},
+          "users": [{
+              "id": "{{ wrt_v2ray_uuid }}",
+              "alterId": {{ wrt_v2ray_altids |int }},
+              "security": "{{ wrt_v2ray_security }}"
+          }]
+        }]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "wsSettings": {
+          "path": "{{ wrt_v2ray_web_path }}"
+        },
+        "security": "tls",
+        "tlsSettings": {
+          "serverName": "{{ domain }}",
+          "certificates": [{
+            "usage": "verify",
+            "certificateFile": "/opt/etc/ssl/cert.pem"
+          }],
+          "allowInsecure": false
+        }
+      }
+    }{{ loop.last |ternary('',',') }}
+{% endfor %}
+  ],
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      {
+        "type": "field",
+        "network": "tcp,udp",
+        "balancerTag": "cdn"
+      }
+    ],
+    "balancers": [
+      {
+        "tag": "cdn",
+        "selector": ["cdn"]
+      }
+    ]
+  },
+  "dns": {
+    "servers": [
+{% for resolver in wrt_v2ray_dns_servers %}
+      "{{ resolver }}"{{ loop.last |ternary('',',') }}
+{% endfor %}
+    ]
+  },
+  "policy": {
+    "levels": {
+      "0": {
+        "uplinkOnly": 0,
+        "downlinkOnly": 0
+      }
+    },
+    "system": {
+      "statsInboundUplink": false,
+      "statsInboundDownlink": false
+    }
+  },
+  "other": {}
+}
