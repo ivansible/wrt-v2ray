@@ -6,7 +6,7 @@
 
 - name: detect latest v2ray client release
   github_release:
-    repository: v2ray/v2ray-core
+    repository: v2fly/v2ray-core
     release: latest
     template: '{download_url}/v2ray-linux-mipsle.zip'
     creates: "{{ wrt_v2ray_client_binary }}"

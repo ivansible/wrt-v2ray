@@ -4,7 +4,7 @@
 [![Travis Test Status](https://travis-ci.org/ivansible/wrt-v2ray.svg?branch=master)](https://travis-ci.org/ivansible/wrt-v2ray)
 [![Ansible Galaxy](https://img.shields.io/badge/galaxy-ivansible.wrt__v2ray-68a.svg?style=flat)](https://galaxy.ansible.com/ivansible/wrt_v2ray/)
 
-This role deploys [v2ray](https://github.com/v2ray/v2ray-core/) client
+This role deploys [v2ray](https://github.com/v2fly/v2ray-core/) client
 on Keenetic Entware.
 
 
